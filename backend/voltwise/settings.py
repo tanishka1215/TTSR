@@ -12,6 +12,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'voltwise-hackathon-secret-key')
 
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', '')
+
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['*']
@@ -23,6 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'corsheaders',
     'rest_framework',
+    'rest_framework.authtoken',
     'appliances',
 ]
 

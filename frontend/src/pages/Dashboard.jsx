@@ -7,11 +7,14 @@ import {
 import { motion } from 'framer-motion'
 import { PlusCircle, RefreshCw, Zap, IndianRupee, Leaf, BarChart2, Flame } from 'lucide-react'
 
-import { getDashboard, getRecommendations, deleteAppliance, seedAppliances } from '../api/client'
+import { getDashboard, getRecommendations, deleteAppliance, seedAppliances, getGamification } from '../api/client'
 import SummaryCard from '../components/SummaryCard'
 import SlabIndicator from '../components/SlabIndicator'
 import RecommendationCard from '../components/RecommendationCard'
 import ApplianceTable from '../components/ApplianceTable'
+import AiInsightsCard from '../components/AiInsightsCard'
+import EnergySaverScore from '../components/EnergySaverScore'
+import ChallengesPanel from '../components/ChallengesPanel'
 
 const CHART_COLORS = ['#6366f1','#3b82f6','#06b6d4','#14b8a6','#22c55e','#f59e0b','#f97316','#ef4444','#a855f7','#ec4899']
 
@@ -59,6 +62,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [toast, setToast] = useState(null)
   const [seeding, setSeeding] = useState(false)
+  const [gamification, setGamification] = useState(null)
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type })
@@ -79,6 +83,13 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => { fetchAll() }, [fetchAll])
+
+  // Fetch gamification data (non-blocking)
+  useEffect(() => {
+    getGamification()
+      .then(r => setGamification(r.data))
+      .catch(() => {}) // silent fail — auth may not be set up
+  }, [])
 
   const handleDelete = async (id) => {
     if (!window.confirm('Remove this appliance?')) return
@@ -218,6 +229,63 @@ export default function Dashboard() {
             />
           </div>
 
+          {/* ── AI + Gamification Row ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 28 }}>
+            <AiInsightsCard />
+            <EnergySaverScore
+              score={gamification?.score ?? 75}
+              badge={gamification?.badge}
+              points={gamification?.points ?? 0}
+              city={gamification?.city ?? ''}
+              rate={gamification?.electricity_rate ?? 7.10}
+            />
+          </div>
+
+          {/* ── Carbon Savings ── */}
+          {data.total_yearly_co2_kg > 0 && (() => {
+            const co2 = data.total_yearly_co2_kg
+            const trees = Math.max(1, Math.round(co2 / 20))
+            const potentialSave = Math.round(co2 * 0.2) // ~20% potential reduction
+            const treesIfSaved  = Math.max(1, Math.round(potentialSave / 20))
+            return (
+              <motion.div
+                className="carbon-banner"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+              >
+                <div className="carbon-banner-inner">
+                  <div className="carbon-stat">
+                    <div className="carbon-icon">🌍</div>
+                    <div>
+                      <div className="carbon-label">Yearly CO₂ Generated</div>
+                      <div className="carbon-value" style={{ color: '#f87171' }}>{co2.toFixed(1)} kg</div>
+                      <div className="carbon-sub">≈ {trees} 🌳 trees needed to offset</div>
+                    </div>
+                  </div>
+                  <div className="carbon-divider" />
+                  <div className="carbon-stat">
+                    <div className="carbon-icon">✅</div>
+                    <div>
+                      <div className="carbon-label">Potential CO₂ Savings (20%)</div>
+                      <div className="carbon-value" style={{ color: '#4ade80' }}>{potentialSave} kg</div>
+                      <div className="carbon-sub">= planting {treesIfSaved} 🌳 trees/year</div>
+                    </div>
+                  </div>
+                  <div className="carbon-divider" />
+                  <div className="carbon-stat">
+                    <div className="carbon-icon">💡</div>
+                    <div>
+                      <div className="carbon-label">1 Tree Absorbs</div>
+                      <div className="carbon-value" style={{ color: '#60a5fa' }}>~20 kg</div>
+                      <div className="carbon-sub">CO₂ per year (global avg)</div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )
+          })()}
+
           {/* ── Top 3 Energy Wasters ── */}
           {top3.length > 0 && (
             <motion.div
@@ -350,6 +418,16 @@ export default function Dashboard() {
               appliances={data.appliances}
               onDelete={handleDelete}
             />
+          </motion.div>
+
+          {/* ── Challenges Panel ── */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.35 }}
+            style={{ marginBottom: 28 }}
+          >
+            <ChallengesPanel />
           </motion.div>
 
           {/* ── Recommendations ── */}
